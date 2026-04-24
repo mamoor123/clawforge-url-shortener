@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClawForge URL Shortener</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f0f23; color: #e0e0e0; min-height: 100vh; }
+    .container { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, #7c3aed, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #888; margin-bottom: 2rem; }
+    .card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.875rem; color: #aaa; margin-bottom: 0.5rem; }
+    input[type="url"] { width: 100%; padding: 0.75rem 1rem; background: #0f0f23; border: 1px solid #2a2a4a; border-radius: 8px; color: #fff; font-size: 1rem; outline: none; }
+    input[type="url"]:focus { border-color: #7c3aed; }
+    button { margin-top: 1rem; padding: 0.75rem 1.5rem; background: #7c3aed; color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; width: 100%; }
+    button:hover { background: #6d28d9; }
+    .result { display: none; margin-top: 1rem; padding: 1rem; background: #0f0f23; border-radius: 8px; border: 1px solid #22c55e; }
+    .result.show { display: block; }
+    .result a { color: #22c55e; font-size: 1.125rem; word-break: break-all; }
+    .result .copy { margin-top: 0.5rem; padding: 0.5rem; background: #22c55e; color: #000; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem; width: auto; }
+    .stats { margin-top: 2rem; }
+    .stat-row { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #1a1a2e; }
+    .stat-label { color: #888; }
+    .stat-value { font-weight: 600; }
+    .badge { display: inline-block; padding: 0.25rem 0.75rem; background: #1e293b; border-radius: 9999px; font-size: 0.75rem; color: #7c3aed; }
+    .footer { text-align: center; margin-top: 3rem; color: #555; font-size: 0.875rem; }
+    .footer a { color: #7c3aed; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔗 ClawForge Shortener</h1>
+    <p class="subtitle">Built by OpenClaw — Multi-Agent Dev Team</p>
+
+    <div class="card">
+      <label for="url-input">Paste a long URL</label>
+      <input type="url" id="url-input" placeholder="https://example.com/very/long/url/that/needs/shortening" required>
+      <button onclick="shortenUrl()">Shorten It</button>
+      <div class="result" id="result">
+        <p>Your short URL:</p>
+        <a id="short-url" href="#" target="_blank"></a>
+        <button class="copy" onclick="copyUrl()">📋 Copy</button>
+      </div>
+    </div>
+
+    <div class="card stats" id="stats-panel" style="display:none">
+      <h3 style="margin-bottom:1rem">📊 Stats</h3>
+      <div class="stat-row"><span class="stat-label">Total URLs</span><span class="stat-value" id="stat-urls">-</span></div>
+      <div class="stat-row"><span class="stat-label">Total Clicks</span><span class="stat-value" id="stat-clicks">-</span></div>
+    </div>
+
+    <div class="footer">
+      <p>Powered by <a href="https://github.com/openclaw/openclaw">OpenClaw</a> 🦞</p>
+      <p style="margin-top:0.25rem"><span class="badge">ClawForge</span> Multi-Agent Pipeline</p>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+
+    async function shortenUrl() {
+      const url = document.getElementById('url-input').value;
+      if (!url) return;
+      try {
+        const res = await fetch(`${API}/api/shorten`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('short-url').href = data.shortUrl;
+          document.getElementById('short-url').textContent = data.shortUrl;
+          document.getElementById('result').classList.add('show');
+        } else {
+          alert(data.error || 'Failed to shorten URL');
+        }
+      } catch (err) {
+        alert('Network error — could not reach the server');
+      }
+    }
+
+    function copyUrl() {
+      const url = document.getElementById('short-url').textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      const btn = document.querySelector('.copy');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    }
+
+    // Load stats on page load
+    fetch(`${API}/api/urls`).then(r => {
+      if (!r.ok) throw new Error('Failed to load stats');
+      return r.json();
+    }).then(data => {
+      document.getElementById('stat-urls').textContent = data.total || 0;
+      const totalClicks = (data.urls || []).reduce((sum, u) => sum + (u.clicks || 0), 0);
+      document.getElementById('stat-clicks').textContent = totalClicks;
+      document.getElementById('stats-panel').style.display = 'block';
+    }).catch(() => {
+      document.getElementById('stats-panel').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
